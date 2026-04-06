@@ -2,6 +2,11 @@ from SpotiFLAC import SpotiFLAC
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import threading
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
@@ -40,7 +45,7 @@ def index():
         jobs[job_id]["thread"] = t
         t.start()
 
-        print(f"Received Spotify link: {link}, job_id: {job_id}")
+        logger.info(f"Received Spotify link: {link}, job_id: {job_id}")
 
         return jsonify({"message": "Download started", "job_id": job_id})
 
@@ -48,6 +53,7 @@ def index():
 def download(job_id, link, stop_flag):
     try:
         jobs[job_id]["status"] = "downloading"
+        logger.info(f"Job {job_id} - Starting download for link: {link}")
 
         # SpotiFLAC itself doesn't support mid-download canceling,
         # so this only stops between retries if loop is used
@@ -63,14 +69,14 @@ def download(job_id, link, stop_flag):
 
         if stop_flag.is_set():
             jobs[job_id]["status"] = "cancelled"
+            logger.info(f"Job {job_id} - Download cancelled for link: {link}")
         else:
             jobs[job_id]["status"] = "finished"
-
-        print(f"Finished: {link}")
+            logger.info(f"Job {job_id} - Finished downloading link: {link}")
 
     except Exception as e:
         jobs[job_id]["status"] = "error"
-        print(f"Error downloading {link}: {e}")
+        logger.error(f"Job {job_id} - Error downloading {link}: {e}", exc_info=True)
 
 
 @app.route('/status')
