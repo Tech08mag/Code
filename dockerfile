@@ -1,28 +1,37 @@
-# Base Python image with full stdlib
+# Use a Python image with full standard library
 FROM python:3.13-bookworm
 
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files
+# Create a non-root user
+RUN groupadd --system --gid 999 nonroot \
+ && useradd --system --gid 999 --uid 999 --create-home nonroot
+
+# Copy dependency lockfiles first for caching
 COPY pyproject.toml uv.lock* ./
 
-# Create virtual environment including system site packages (optional)
+# Create a virtual environment (includes system site packages to avoid missing stdlib)
 RUN python -m venv /app/.venv \
     && /app/.venv/bin/pip install --upgrade pip setuptools wheel
 
-# Install dependencies inside the venv
-RUN /app/.venv/bin/pip install "flask>=3.1.3" "flask-cors>=6.0.2" "spotiflac>=0.2.8"
+# Install project dependencies using uv into the virtual environment
+ENV PATH="/app/.venv/bin:$PATH"
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-install-project
 
-# Copy the rest of the project
-COPY . .
+# Copy the rest of the project into /app
+COPY --chown=999:999 . .
 
-# Set PATH so the venv is used
+# Install the project itself in editable mode
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked
+
+# Set environment to use our venv
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Use non-root user
-RUN useradd -m nonroot
+# Switch to non-root user
 USER nonroot
 
-# Run your app
+# Run the app
 CMD ["python", "main.py"]
