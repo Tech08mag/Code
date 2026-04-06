@@ -2,9 +2,6 @@ services:
   fahrgemeinschaften:
     container_name: spotidown
     image: spotidown:latest
-    depends_on:
-      postgres:
-        condition: service_healthy
     ports:
       - 5000:5000
     volumes:
