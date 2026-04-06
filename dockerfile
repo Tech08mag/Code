@@ -6,22 +6,27 @@ RUN groupadd --system --gid 999 nonroot \
 
 WORKDIR /home/nonroot/app
 ENV HOME=/home/nonroot
+ENV UV_CACHE_DIR=/home/nonroot/uv-cache
+
+# Pre-create cache directory owned by non-root
+RUN mkdir -p /home/nonroot/uv-cache && chown -R 999:999 /home/nonroot/uv-cache
 
 # Copy dependency files
 COPY pyproject.toml uv.lock* ./
 
-# Install dependencies using uv **as root**
-RUN --mount=type=cache,target=/root/.cache/uv \
+# Switch to non-root user for all uv operations
+USER nonroot
+
+# Install dependencies using uv (as non-root)
+RUN --mount=type=cache,target=/home/nonroot/uv-cache \
     uv sync --locked --no-install-project
 
 # Copy project code
-COPY . .
+COPY --chown=999:999 . .
 
 # Install project
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/home/nonroot/uv-cache \
     uv sync --locked
 
-# Switch to non-root user to run
-USER nonroot
-
+# Run the app
 CMD ["uv", "run", "main.py"]

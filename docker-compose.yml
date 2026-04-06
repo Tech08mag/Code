@@ -1,7 +1,8 @@
 services:
-  fahrgemeinschaften:
+  spotidown:
     container_name: spotidown
     image: spotidown:latest
+    user: "${UID}:${GID}"
     ports:
       - 5001:5000
     volumes:
