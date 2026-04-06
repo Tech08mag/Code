@@ -22,4 +22,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
 USER nonroot
-CMD ["python", "main.py"]
+
+# ⚠ Explicitly call Python from the virtual environment
+CMD ["/app/.venv/bin/python", "main.py"]
