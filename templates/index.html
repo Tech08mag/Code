@@ -63,7 +63,6 @@ function addOrUpdateJob(id, job) {
         <span class="truncate">${job.link}</span>
         <div class="flex items-center space-x-2">
           <span class="text-xs ${statusColor(job.status)}" id="status-${id}">${job.status}</span>
-          <button class="text-red-500 text-xs" id="cancel-${id}">Cancel</button>
         </div>
       </div>
       <div class="w-full bg-gray-800 rounded-full h-2">
@@ -73,16 +72,6 @@ function addOrUpdateJob(id, job) {
 
     downloads.prepend(li);
     jobElements[id] = li;
-
-    document.getElementById(`cancel-${id}`).addEventListener('click', async () => {
-      try {
-        await fetch('http://127.0.0.1:5000/cancel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ job_id: id })
-        });
-      } catch {}
-    });
   }
 
   // Update status

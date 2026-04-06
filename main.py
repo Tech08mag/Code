@@ -53,7 +53,7 @@ def download(job_id, link, stop_flag):
         # so this only stops between retries if loop is used
         SpotiFLAC(
             url=link,
-            output_dir="./music",
+            output_dir="/music",
             services=["tidal", "spoti", "youtube", "qobuz", "amazon"],
             filename_format="{year} - {album}/{track}. {title}",
             use_artist_subfolders=True,
@@ -76,19 +76,6 @@ def download(job_id, link, stop_flag):
 @app.route('/status')
 def status():
     return jsonify({job_id: {"link": job["link"], "status": job["status"]} for job_id, job in jobs.items()})
-
-
-@app.route('/cancel', methods=['POST'])
-def cancel():
-    data = request.get_json()
-    job_id = data.get('job_id')
-    job = jobs.get(job_id)
-    if not job:
-        return jsonify({"message": "Job not found"}), 404
-
-    job["stop_flag"].set()
-    print(f"Cancel requested for job_id: {job_id}")
-    return jsonify({"message": "Cancel requested"})
 
 
 def main():
