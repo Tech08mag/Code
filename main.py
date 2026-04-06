@@ -92,7 +92,7 @@ def cancel():
 
 
 def main():
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
 
 
 if __name__ == "__main__":

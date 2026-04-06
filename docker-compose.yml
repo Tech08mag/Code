@@ -2,7 +2,7 @@ services:
   spotidown:
     container_name: spotidown
     image: spotidown:latest
-    user: "${UID}:${GID}"
+    user: "1000:1000"
     ports:
       - 5001:5000
     volumes:
