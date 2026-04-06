@@ -1,12 +1,21 @@
+import logging
+import sys
 from SpotiFLAC import SpotiFLAC
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import threading
-import logging
 
-# Setup logging
+# Setup logging to a file (for errors and general logs)
+log_filename = 'app_errors.log'
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Create a file handler to log errors to a file
+file_handler = logging.FileHandler(log_filename)
+file_handler.setLevel(logging.ERROR)  # Log only errors or higher (WARNING, ERROR, CRITICAL)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 app = Flask(__name__)
 CORS(app)
@@ -55,17 +64,26 @@ def download(job_id, link, stop_flag):
         jobs[job_id]["status"] = "downloading"
         logger.info(f"Job {job_id} - Starting download for link: {link}")
 
-        # SpotiFLAC itself doesn't support mid-download canceling,
-        # so this only stops between retries if loop is used
-        SpotiFLAC(
-            url=link,
-            output_dir="/music",
-            services=["tidal", "spoti", "youtube", "qobuz", "amazon"],
-            filename_format="{year} - {album}/{track}. {title}",
-            use_artist_subfolders=True,
-            use_album_subfolders=True,
-            loop=60*24
-        )
+        # Capture SpotiFLAC's output by redirecting stdout/stderr
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = sys.stderr = open('spoti_flac_output.log', 'a')  # Redirect logs to a file
+
+        try:
+            # SpotiFLAC itself doesn't support mid-download canceling,
+            # so this only stops between retries if loop is used
+            SpotiFLAC(
+                url=link,
+                output_dir="/music",
+                services=["tidal", "spoti", "youtube", "qobuz", "amazon"],
+                filename_format="{year} - {album}/{track}. {title}",
+                use_artist_subfolders=True,
+                use_album_subfolders=True,
+                loop=60*24
+            )
+        finally:
+            sys.stdout = old_stdout  # Restore original stdout
+            sys.stderr = old_stderr  # Restore original stderr
 
         if stop_flag.is_set():
             jobs[job_id]["status"] = "cancelled"
@@ -85,7 +103,7 @@ def status():
 
 
 def main():
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)  # Disable Flask's internal debugger
 
 
 if __name__ == "__main__":
