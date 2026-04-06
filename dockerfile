@@ -6,23 +6,22 @@ WORKDIR /app
 RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot
 
-# Copy dependency files for caching
+# Copy dependency files
 COPY pyproject.toml uv.lock* ./
 
-# Install dependencies using uv (without creating another venv)
-ENV UV_TOOL_BIN_DIR=/usr/local/bin
+# Install dependencies using uv
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project
 
-# Copy the rest of the source code
+# Copy project code
 COPY --chown=999:999 . .
 
-# Install the project itself
+# Install project
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
-# Use UV's Python automatically; no venv needed
-ENV PATH="/app/.venv/bin:$PATH"
-
+# Use non-root user
 USER nonroot
-CMD ["python", "main.py"]
+
+# Run the app using UV-managed Python
+CMD ["uv", "run", "python", "main.py"]
