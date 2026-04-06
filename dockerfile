@@ -39,5 +39,6 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENTRYPOINT []
 
 # Use the non-root user to run our application
+# Use system Python
 USER nonroot
-CMD ["python", "main.py"]
+CMD ["/usr/local/bin/python", "main.py"]
