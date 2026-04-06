@@ -1,5 +1,5 @@
 # Use a Python image with full standard library
-FROM python:3.13-bookworm
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 # Set working directory
 WORKDIR /app
