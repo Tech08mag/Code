@@ -2,26 +2,27 @@ FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 WORKDIR /app
 
+# Create non-root user
 RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot
 
+# Copy dependency files for caching
 COPY pyproject.toml uv.lock* ./
 
-# Create a venv using copies to avoid broken stdlib links
-RUN python -m venv --copies /app/.venv \
-    && /app/.venv/bin/pip install --upgrade pip setuptools wheel
-
-ENV PATH="/app/.venv/bin:$PATH"
-
+# Install dependencies using uv (without creating another venv)
+ENV UV_TOOL_BIN_DIR=/usr/local/bin
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project
 
+# Copy the rest of the source code
 COPY --chown=999:999 . .
 
+# Install the project itself
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
-USER nonroot
+# Use UV's Python automatically; no venv needed
+ENV PATH="/app/.venv/bin:$PATH"
 
-# ⚠ Explicitly call Python from the virtual environment
-CMD ["/app/.venv/bin/python", "main.py"]
+USER nonroot
+CMD ["python", "main.py"]
