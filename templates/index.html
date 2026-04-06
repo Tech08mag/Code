@@ -92,7 +92,7 @@ function addOrUpdateJob(id, job) {
 // Load all jobs on page load
 async function loadJobs() {
   try {
-    const res = await fetch('http://127.0.0.1:5000/status');
+    const res = await fetch('https://spotidown.techmos.org/status');
     const data = await res.json();
 
     for (const id in data) {
@@ -113,7 +113,7 @@ input.addEventListener('keypress', async (e) => {
 
     status.textContent = "Sending...";
     try {
-      const res = await fetch('http://127.0.0.1:5000/', {
+      const res = await fetch('https://spotidown.techmos.org/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ link })
