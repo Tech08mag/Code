@@ -2,15 +2,9 @@ services:
   spotidown:
     container_name: spotidown
     image: spotidown:latest
+    network_mode: host
     ports:
       - 5001:5000
     volumes:
-      - ./data:/data
       - ./music:/music #map to the navidrome musicfolder
     restart: unless-stopped
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge

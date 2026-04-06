@@ -1,21 +1,8 @@
-import logging
 import sys
 from SpotiFLAC import SpotiFLAC
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import threading
-
-# Setup logging to a file (for errors and general logs)
-log_filename = 'app_errors.log'
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-# Create a file handler to log errors to a file
-file_handler = logging.FileHandler(log_filename)
-file_handler.setLevel(logging.ERROR)  # Log only errors or higher (WARNING, ERROR, CRITICAL)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
 
 app = Flask(__name__)
 CORS(app)
@@ -24,7 +11,6 @@ CORS(app)
 jobs = {}  # job_id -> {link, status, stop_flag, thread}
 job_id_counter = 0
 lock = threading.Lock()  # to safely increment job ids
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -54,15 +40,14 @@ def index():
         jobs[job_id]["thread"] = t
         t.start()
 
-        logger.info(f"Received Spotify link: {link}, job_id: {job_id}")
+        print(f"Received Spotify link: {link}, job_id: {job_id}")
 
         return jsonify({"message": "Download started", "job_id": job_id})
-
 
 def download(job_id, link, stop_flag):
     try:
         jobs[job_id]["status"] = "downloading"
-        logger.info(f"Job {job_id} - Starting download for link: {link}")
+        print(f"Job {job_id} - Starting download for link: {link}")
 
         # Capture SpotiFLAC's output by redirecting stdout/stderr
         old_stdout = sys.stdout
@@ -87,24 +72,21 @@ def download(job_id, link, stop_flag):
 
         if stop_flag.is_set():
             jobs[job_id]["status"] = "cancelled"
-            logger.info(f"Job {job_id} - Download cancelled for link: {link}")
+            print(f"Job {job_id} - Download cancelled for link: {link}")
         else:
             jobs[job_id]["status"] = "finished"
-            logger.info(f"Job {job_id} - Finished downloading link: {link}")
+            print(f"Job {job_id} - Finished downloading link: {link}")
 
     except Exception as e:
         jobs[job_id]["status"] = "error"
-        logger.error(f"Job {job_id} - Error downloading {link}: {e}", exc_info=True)
-
+        print(f"Job {job_id} - Error downloading {link}: {e}")
 
 @app.route('/status')
 def status():
     return jsonify({job_id: {"link": job["link"], "status": job["status"]} for job_id, job in jobs.items()})
 
-
 def main():
     app.run(host='0.0.0.0', port=5000, debug=False)  # Disable Flask's internal debugger
-
 
 if __name__ == "__main__":
     main()
