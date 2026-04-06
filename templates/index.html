@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+
+<body class="bg-black text-white flex items-center justify-center h-screen">
+
+  <div class="w-full max-w-md px-6">
+
+    <!-- Title -->
+    <h1 class="text-2xl font-semibold mb-6 text-center text-green-500">
+      Spotify Downloader
+    </h1>
+
+    <!-- Input -->
+    <input 
+      id="spotifyInput"
+      type="text" 
+      placeholder="Paste Spotify link and press Enter"
+      class="w-full bg-transparent border border-gray-700 rounded-xl px-4 py-3 
+             focus:outline-none focus:border-green-500 
+             placeholder-gray-500"
+    />
+
+    <!-- Status -->
+    <p id="status" class="text-sm text-gray-500 mt-3 text-center"></p>
+
+    <!-- Downloads Overview -->
+    <div class="mt-8">
+      <h2 class="text-sm text-gray-400 mb-2">Downloads</h2>
+      
+      <ul id="downloads" class="space-y-4 text-sm"></ul>
+    </div>
+
+  </div>
+
+<script>
+const input = document.getElementById('spotifyInput');
+const status = document.getElementById('status');
+const downloads = document.getElementById('downloads');
+const jobElements = {};
+
+function statusColor(status) {
+  return {
+    queued: "text-gray-500",
+    downloading: "text-yellow-400",
+    finished: "text-green-500",
+    error: "text-red-500",
+    cancelled: "text-red-400"
+  }[status] || "text-gray-500";
+}
+
+function addOrUpdateJob(id, job) {
+  if (!jobElements[id]) {
+    const li = document.createElement('li');
+    li.className = "text-gray-300 border border-gray-800 rounded-xl px-3 py-2 flex flex-col space-y-2";
+
+    li.innerHTML = `
+      <div class="flex justify-between items-center">
+        <span class="truncate">${job.link}</span>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs ${statusColor(job.status)}" id="status-${id}">${job.status}</span>
+          <button class="text-red-500 text-xs" id="cancel-${id}">Cancel</button>
+        </div>
+      </div>
+      <div class="w-full bg-gray-800 rounded-full h-2">
+        <div class="bg-green-500 h-2 rounded-full" id="progress-${id}" style="width:0%"></div>
+      </div>
+    `;
+
+    downloads.prepend(li);
+    jobElements[id] = li;
+
+    document.getElementById(`cancel-${id}`).addEventListener('click', async () => {
+      try {
+        await fetch('http://127.0.0.1:5000/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: id })
+        });
+      } catch {}
+    });
+  }
+
+  // Update status
+  const statusSpan = document.getElementById(`status-${id}`);
+  statusSpan.textContent = job.status;
+  statusSpan.className = `text-xs ${statusColor(job.status)}`;
+
+  // Update progress
+  const progressBar = document.getElementById(`progress-${id}`);
+  if (job.progress !== undefined) {
+    progressBar.style.width = job.progress + "%";
+  } else if (job.status === "downloading") {
+    const currentWidth = parseFloat(progressBar.style.width) || 0;
+    progressBar.style.width = Math.min(currentWidth + 2, 95) + "%";
+  }
+}
+
+// Load all jobs on page load
+async function loadJobs() {
+  try {
+    const res = await fetch('http://127.0.0.1:5000/status');
+    const data = await res.json();
+
+    for (const id in data) {
+      addOrUpdateJob(id, data[id]);
+    }
+  } catch {}
+}
+
+// Poll backend every 2 seconds
+setInterval(loadJobs, 2000);
+loadJobs();
+
+// Handle new Spotify links
+input.addEventListener('keypress', async (e) => {
+  if (e.key === 'Enter') {
+    const link = input.value.trim();
+    if (!link) return;
+
+    status.textContent = "Sending...";
+    try {
+      const res = await fetch('http://127.0.0.1:5000/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link })
+      });
+
+      const data = await res.json();
+      const jobId = data.job_id;
+
+      status.textContent = "Added";
+      addOrUpdateJob(jobId, { link, status: "queued", progress: 0 });
+      input.value = "";
+    } catch (err) {
+      status.textContent = "Error";
+    }
+  }
+});
+</script>
+
+</body>
+</html>
