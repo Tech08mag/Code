@@ -4,15 +4,18 @@ FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot
 
-# Switch to non-root user early
+# Set workdir and home
 USER nonroot
 WORKDIR /home/nonroot/app
 ENV HOME=/home/nonroot
 
+# Pre-create cache directory so uv can write to it
+RUN mkdir -p /home/nonroot/.cache/uv
+
 # Copy dependency files
 COPY pyproject.toml uv.lock* ./
 
-# Install dependencies using uv (as non-root)
+# Install dependencies using uv
 RUN --mount=type=cache,target=/home/nonroot/.cache/uv \
     uv sync --locked --no-install-project
 
