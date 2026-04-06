@@ -1,44 +1,28 @@
-# Source: https://github.com/astral-sh/uv-docker-example/tree/main
-# Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+# Base Python image with full stdlib
+FROM python:3.13-bookworm
 
-# Setup a non-root user
-RUN groupadd --system --gid 999 nonroot \
- && useradd --system --gid 999 --uid 999 --create-home nonroot
-
-# Install the project into `/app`
+# Set working directory
 WORKDIR /app
 
-# Enable bytecode compilation
-ENV UV_COMPILE_BYTECODE=1
+# Copy dependency files
+COPY pyproject.toml uv.lock* ./
 
-# Copy from the cache instead of linking since it's a mounted volume
-ENV UV_LINK_MODE=copy
+# Create virtual environment including system site packages (optional)
+RUN python -m venv /app/.venv \
+    && /app/.venv/bin/pip install --upgrade pip setuptools wheel
 
-# Omit development dependencies
-ENV UV_NO_DEV=1
+# Install dependencies inside the venv
+RUN /app/.venv/bin/pip install "flask>=3.1.3" "flask-cors>=6.0.2" "spotiflac>=0.2.8"
 
-# Ensure installed tools can be executed out of the box
-ENV UV_TOOL_BIN_DIR=/usr/local/bin
+# Copy the rest of the project
+COPY . .
 
-# Install the project's dependencies using the lockfile and settings
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project
-
-# Then, add the rest of the project source code and install it
-# Installing separately from its dependencies allows optimal layer caching
-COPY --chown=999:999 . /app
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked
-# Place executables in the environment at the front of the path
+# Set PATH so the venv is used
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Reset the entrypoint, don't invoke `uv`
-ENTRYPOINT []
-
-# Use the non-root user to run our application
-# Use system Python
+# Use non-root user
+RUN useradd -m nonroot
 USER nonroot
-CMD ["/usr/local/bin/python", "main.py"]
+
+# Run your app
+CMD ["python", "main.py"]
