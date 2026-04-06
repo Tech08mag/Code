@@ -24,4 +24,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 USER nonroot
 
 # Run the app using UV-managed Python
-CMD ["uv", "run", "python", "main.py"]
+CMD ["uv", "run", "main.py"]
