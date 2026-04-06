@@ -6,7 +6,7 @@ services:
       - 5000:5000
     volumes:
       - ./data:/data
-      - ./music:/music #map to the navidrome musicfolder
+      - /home/jackmos/navidrome/downloads:/music #map to the navidrome musicfolder
     restart: unless-stopped
     networks:
       - app-network
